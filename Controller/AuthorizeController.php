@@ -170,7 +170,7 @@ class AuthorizeController
 
         return new Response(
             $this->templating->render(
-                'FOSOAuthServerBundle:Authorize:authorize.html.'.$this->templateEngineType,
+                '@FOSOAuthServerBundle/Authorize/authorize.html.'.$this->templateEngineType,
                 [
                     'form' => $form->createView(),
                     'client' => $this->getClient(),
@@ -193,10 +193,7 @@ class AuthorizeController
             $this->session->invalidate();
         }
 
-        $this->eventDispatcher->dispatch(
-            OAuthEvent::POST_AUTHORIZATION_PROCESS,
-            new OAuthEvent($user, $this->getClient(), $formHandler->isAccepted())
-        );
+        $this->eventDispatcher->dispatch(new OAuthEvent($user, $this->getClient(), $formHandler->isAccepted()), OAuthEvent::POST_AUTHORIZATION_PROCESS);
 
         $formName = $this->authorizeForm->getName();
         if (!$request->query->all() && $request->request->has($formName)) {
