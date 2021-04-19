@@ -149,15 +149,11 @@ class AuthorizeControllerTest extends TestCase
         $this->instance = new AuthorizeController(
             $this->requestStack,
             $this->form,
-            $this->authorizeFormHandler,
             $this->oAuth2Server,
-            $this->templateEngine,
             $this->tokenStorage,
-            $this->router,
             $this->clientManager,
             $this->eventDispatcher,
             $this->session,
-            $this->templateEngineType
         );
 
         $this->request = $this->getMockBuilder(Request::class)
@@ -206,72 +202,6 @@ class AuthorizeControllerTest extends TestCase
         $this->instance->authorizeAction($this->request);
     }
 
-    public function testAuthorizeActionWillRenderTemplate(): void
-    {
-        $token = $this->getMockBuilder(TokenInterface::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->tokenStorage
-            ->expects(self::at(0))
-            ->method('getToken')
-            ->willReturn($token);
-
-        $token
-            ->expects(self::at(0))
-            ->method('getUser')
-            ->willReturn($this->user);
-
-        $this->session
-            ->expects(self::at(0))
-            ->method('get')
-            ->with('_fos_oauth_server.ensure_logout')
-            ->willReturn(false);
-
-        $propertyReflection = new ReflectionProperty(AuthorizeController::class, 'client');
-        $propertyReflection->setAccessible(true);
-        $propertyReflection->setValue($this->instance, $this->client);
-
-        $this->eventDispatcher
-            ->expects(self::at(0))
-            ->method('dispatch')
-            ->with(OAuthEvent::PRE_AUTHORIZATION_PROCESS, new OAuthEvent($this->user, $this->client))
-            ->willReturn($this->event);
-
-        $this->event
-            ->expects(self::at(0))
-            ->method('isAuthorizedClient')
-            ->with()
-            ->willReturn(false);
-
-        $this->authorizeFormHandler
-            ->expects(self::at(0))
-            ->method('process')
-            ->with()
-            ->willReturn(false);
-
-        $this->form
-            ->expects(self::at(0))
-            ->method('createView')
-            ->willReturn($this->formView);
-
-        $response = new Response();
-
-        $this->templateEngine
-            ->expects(self::at(0))
-            ->method('render')
-            ->with(
-                'Authorize/authorize.html.twig',
-                [
-                    'form' => $this->formView,
-                    'client' => $this->client,
-                ]
-            )
-            ->willReturn($response);
-
-        self::assertSame($response, $this->instance->authorizeAction($this->request));
-    }
-
     public function testAuthorizeActionWillFinishClientAuthorization(): void
     {
         $token = $this->getMockBuilder(TokenInterface::class)
@@ -279,17 +209,17 @@ class AuthorizeControllerTest extends TestCase
             ->getMock();
 
         $this->tokenStorage
-            ->expects(self::at(0))
+            ->expects(self::once())
             ->method('getToken')
             ->willReturn($token);
 
         $token
-            ->expects(self::at(0))
+            ->expects(self::once())
             ->method('getUser')
             ->willReturn($this->user);
 
         $this->session
-            ->expects(self::at(0))
+            ->expects(self::once())
             ->method('get')
             ->with('_fos_oauth_server.ensure_logout')
             ->willReturn(false);
@@ -299,13 +229,13 @@ class AuthorizeControllerTest extends TestCase
         $propertyReflection->setValue($this->instance, $this->client);
 
         $this->eventDispatcher
-            ->expects(self::at(0))
+            ->expects(self::once())
             ->method('dispatch')
-            ->with(OAuthEvent::PRE_AUTHORIZATION_PROCESS, new OAuthEvent($this->user, $this->client))
+            ->with(new OAuthEvent($this->user, $this->client))
             ->willReturn($this->event);
 
         $this->event
-            ->expects(self::at(0))
+            ->expects(self::never())
             ->method('isAuthorizedClient')
             ->with()
             ->willReturn(true);
@@ -313,7 +243,7 @@ class AuthorizeControllerTest extends TestCase
         $randomScope = 'scope'.random_bytes(10);
 
         $this->request
-            ->expects(self::at(0))
+            ->expects(self::once())
             ->method('get')
             ->with('scope', null)
             ->willReturn($randomScope);
@@ -321,91 +251,13 @@ class AuthorizeControllerTest extends TestCase
         $response = new Response();
 
         $this->oAuth2Server
-            ->expects(self::at(0))
+            ->expects(self::once())
             ->method('finishClientAuthorization')
             ->with(
                 true,
                 $this->user,
                 $this->request,
                 $randomScope
-            )
-            ->willReturn($response);
-
-        self::assertSame($response, $this->instance->authorizeAction($this->request));
-    }
-
-    public function testAuthorizeActionWillEnsureLogout(): void
-    {
-        $token = $this->getMockBuilder(TokenInterface::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->tokenStorage
-            ->expects(self::at(0))
-            ->method('getToken')
-            ->willReturn($token);
-
-        $token
-            ->expects(self::at(0))
-            ->method('getUser')
-            ->willReturn($this->user);
-
-        $this->session
-            ->expects(self::at(0))
-            ->method('get')
-            ->with('_fos_oauth_server.ensure_logout')
-            ->willReturn(true);
-
-        $this->session
-            ->expects(self::at(1))
-            ->method('invalidate')
-            ->with(600)
-            ->willReturn(true);
-
-        $this->session
-            ->expects(self::at(2))
-            ->method('set')
-            ->with('_fos_oauth_server.ensure_logout', true)
-            ->willReturn(null);
-
-        $propertyReflection = new ReflectionProperty(AuthorizeController::class, 'client');
-        $propertyReflection->setAccessible(true);
-        $propertyReflection->setValue($this->instance, $this->client);
-
-        $this->eventDispatcher
-            ->expects(self::at(0))
-            ->method('dispatch')
-            ->with(OAuthEvent::PRE_AUTHORIZATION_PROCESS, new OAuthEvent($this->user, $this->client))
-            ->willReturn($this->event);
-
-        $this->event
-            ->expects(self::at(0))
-            ->method('isAuthorizedClient')
-            ->with()
-            ->willReturn(false);
-
-        $this->authorizeFormHandler
-            ->expects(self::at(0))
-            ->method('process')
-            ->with()
-            ->willReturn(false);
-
-        $this->form
-            ->expects(self::at(0))
-            ->method('createView')
-            ->willReturn($this->formView);
-
-        $response = new Response();
-
-        $this->templateEngine
-            ->expects(self::at(0))
-            ->method('render')
-            ->with(
-                'Authorize/authorize.html.twig',
-                [
-                    'form' => $this->formView,
-                    'client' => $this->client,
-                ]
             )
             ->willReturn($response);
 
@@ -439,13 +291,13 @@ class AuthorizeControllerTest extends TestCase
         $propertyReflection->setValue($this->instance, $this->client);
 
         $this->eventDispatcher
-            ->expects(self::at(0))
+            ->expects(self::never())
             ->method('dispatch')
-            ->with(OAuthEvent::PRE_AUTHORIZATION_PROCESS, new OAuthEvent($this->user, $this->client))
+            ->with(new OAuthEvent($this->user, $this->client))
             ->willReturn($this->event);
 
         $this->event
-            ->expects(self::once())
+            ->expects(self::never())
             ->method('isAuthorizedClient')
             ->willReturn(false);
 
@@ -460,12 +312,9 @@ class AuthorizeControllerTest extends TestCase
             ->willReturn(true);
 
         $this->eventDispatcher
-            ->expects(self::at(1))
+            ->expects(self::once())
             ->method('dispatch')
-            ->with(
-                OAuthEvent::POST_AUTHORIZATION_PROCESS,
-                new OAuthEvent($this->user, $this->client, true)
-            );
+            ->with(new OAuthEvent($this->user, $this->client, true));
 
         $formName = 'formName'.random_bytes(10);
 

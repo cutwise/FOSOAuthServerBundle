@@ -73,7 +73,7 @@ class AuthorizeController
             $this->session->set('_fos_oauth_server.ensure_logout', true);
         }
 
-        $event = $this->eventDispatcher->dispatch(new OAuthEvent($user, $this->getClient()));
+        $this->eventDispatcher->dispatch(new OAuthEvent($user, $this->getClient(), true));
 
         $scope = $request->get('scope');
 
