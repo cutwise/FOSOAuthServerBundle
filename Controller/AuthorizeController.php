@@ -33,7 +33,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
  */
 class AuthorizeController
 {
-    private ?ClientInterface $client;
+    private ?ClientInterface $client = null;
     private ?SessionInterface $session;
     private Form $authorizeForm;
     private OAuth2 $oAuth2Server;
